@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Sat Jun 29 16:40:36 2019
 
@@ -7,12 +9,13 @@ Created on Sat Jun 29 16:40:36 2019
 
 import pickle
 
-prop_dic = pickle.load(open('../data/prop_dic.pkl','rb'))
+prop_dic = pickle.load(open('../data/prop_dic.pkl', 'rb'))
 
 char_2_prop = {}
 
 for prop in prop_dic:
-    if len(prop)<20:#这里设置最大长度，不考虑长度过长的属性值
+    # 这里设置最大长度，不考虑长度过长的属性值
+    if len(prop)<20:
         chars = set(prop)
         for char in chars:
             try:
@@ -20,4 +23,5 @@ for prop in prop_dic:
             except:
                 char_2_prop[char] = [prop]
             
-pickle.dump(char_2_prop,open('../data/char_2_prop.pkl','wb'))
+pickle.dump(char_2_prop, open('../data/char_2_prop.pkl', 'wb'))
+

@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Thu Mar 21 09:40:56 2019
 
 @author: cmy
 """
+
+import pickle
+
+
 segment_dic = {}
 
-with open('../PKUBASE/pkubase-full.txt','r',encoding='utf-8') as fp:
+with open('../PKUBASE/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
     for line in fp:
         if line:
             entity = line.split('\t')[0]
@@ -14,25 +20,26 @@ with open('../PKUBASE/pkubase-full.txt','r',encoding='utf-8') as fp:
             if '_' in ename:
                 ename = ename.split('_')[0]
             segment_dic[ename] = 1
-with open('../PKUBASE/pkubase-mention2ent.txt','r',encoding='utf-8') as fp:
+
+with open('../PKUBASE/pkubase-mention2ent.txt', 'r', encoding='utf-8') as fp:
     for line in fp:
         if line:
             ename = line.split('\t')[0]
             segment_dic[ename] = 1
-            
-with open('../data/segment_dic.txt','w',encoding='utf-8') as fp:
+ 
+with open('../data/segment_dic.txt', 'w', encoding='utf-8') as fp:
     for s in segment_dic:
         if s:
             fp.write(s+'\n')
 
-with open('../data/segment_dic.txt','r',encoding = 'utf-8') as fp:
-    content = fp.read()
-
-with open('../data/segment_dic.txt','w',encoding = 'utf-8') as fp:
-    fp.write(content[:-1])
+#with open('../data/segment_dic.txt','r',encoding = 'utf-8') as fp:
+#    content = fp.read()
+#
+#with open('../data/segment_dic.txt','w',encoding = 'utf-8') as fp:
+#    fp.write(content[:-1])
         
 prop_dic = {}
-with open('../PKUBASE/pkubase-full.txt','r',encoding='utf-8') as fp:
+with open('../PKUBASE/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
     for line in fp:
         if line:
             try:
@@ -46,6 +53,4 @@ with open('../PKUBASE/pkubase-full.txt','r',encoding='utf-8') as fp:
             except:
                 continue
             
-
-import pickle 
 pickle.dump(prop_dic,open('../data/prop_dic.pkl','wb'))
