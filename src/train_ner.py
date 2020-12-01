@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Fri Oct 25 10:33:42 2019
 
 @author: Administrator
 """
 
+import pickle
+import codecs
 import numpy as np
 import pandas as pd
-import pickle
-from keras_bert import load_trained_model_from_checkpoint, Tokenizer,get_custom_objects
-import codecs
-from keras.layers import Input,Dense,LSTM
-from keras.layers.wrappers import TimeDistributed,Bidirectional
-from keras.models import Model,load_model
+from keras.layers import Input, Dense, LSTM
+from keras.layers.wrappers import TimeDistributed, Bidirectional
+from keras.models import Model, load_model
 from keras.optimizers import Adam
+from keras_bert import load_trained_model_from_checkpoint
+from keras_bert import Tokenizer, get_custom_objects
 
 max_seq_len = 20
 config_path = '../../news_classifer_task/wwm/bert_config.json'
