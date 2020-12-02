@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Thu Apr  4 19:28:42 2019
 
 @author: cmy
 """
-from neo4j import GraphDatabase
+
 import time
+from neo4j import GraphDatabase
 
 #neo4j
-driver = GraphDatabase.driver("bolt://localhost:7687")
+driver = GraphDatabase.driver(
+    uri="bolt://192.168.1.10:7687",
+    auth=("neo4j", "neo4j"),
+)
+#driver = GraphDatabase.driver("bolt://localhost:7687")
 session = driver.session()
 begintime = time.time()
 #session.run('MATCH (n) OPTIONAL MATCH (n)-[r]->() RETURN count(n.name) + count(r)')
@@ -71,8 +78,10 @@ def GetTwoEntityTuple(e1,r1,e2):
         tuples.append(tuple([e1,r1,record['r2.name'],e2]))
     return tuples
 
-def SearchAnsChain(e,r1,r2=None):
-    '''对于链式问题，e-r-ans或e-r1-r2-ans，根据最终的实体和关系查询结果'''
+def SearchAnsChain(e, r1, r2=None):
+    """
+    对于链式问题，e-r-ans或e-r1-r2-ans，根据最终的实体和关系查询结果
+    """
     if not r2:
         cql= "match (a:Entity)-[r1:Relation]-(b) where a.name=$ename and r1.name=$r1name return b.name"
         ans = []
@@ -90,6 +99,7 @@ def SearchAnsChain(e,r1,r2=None):
 
 if __name__ == '__main__':
     
-    print(SearchAnsChain('<康佳集团>','<副总裁>'))
-    print(SearchAnsChain('<赵彤威>','<毕业院校>'))
-    print(SearchAnsChain('<康佳集团>','<非职工监事>'))
+    print(SearchAnsChain('<康佳集团>','<外文名称>'))
+    print(SearchAnsChain('<北京大学>','<类型>'))
+    print(SearchAnsChain('<康佳集团>','<类型>'))
+

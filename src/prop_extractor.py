@@ -14,14 +14,12 @@ import time
 
 class PropExtractor(object):
     def __init__(self):
-        self.prop_dic = pickle.load(open('../data/prop_dic.pkl','rb'))#键没有引号
-        self.char_2_prop = pickle.load(open('../data/char_2_prop.pkl','rb'))
+        self.prop_dic = pickle.load(open('../data/prop_dic.pkl', 'rb'))#键没有引号
+        self.char_2_prop = pickle.load(open('../data/char_2_prop.pkl', 'rb'))
         self.segger = thulac.thulac()
         print ('prop extractor loaded')
-        
-    
-    
-    def extract_properties(self,question):
+ 
+    def extract_properties(self, question):
         '''
         输入一个问题，抽取出所有能和知识库中的属性值匹配的字符串，筛选后返回
         input:
@@ -29,12 +27,13 @@ class PropExtractor(object):
         output:
             props : python-dic
         '''
-        props = {}#键为知识库里prop，值为mention
+        # 键为知识库里prop，值为mention
+        props = {}
         QUES = question
         
-        #包含在双引号 书名号里的属性
+        # 包含在双引号 书名号里的属性
         mark_props = {}
-        elements = re.findall('\".+\"|《.+》',question)
+        elements = re.findall('\".+\"|《.+》', question)
         if len(elements)>0:
             for e in elements:  # '甲天下', '完美的搜索引擎，'
                 if e in self.prop_dic:  # 一般书名号的属性就是需要的属性
@@ -45,13 +44,19 @@ class PropExtractor(object):
         #时间属性
         time_props = {}
         #提取年月日
-        year_month_day = re.findall('\d+年\d+月\d+日|\d+年\d+月\d+号|\d+\.\d+\.\d+',question)
+        year_month_day = re.findall(
+            '\d+年\d+月\d+日|\d+年\d+月\d+号|\d+\.\d+\.\d+',
+            question,
+        )
         for ymd in year_month_day:
             rml_norm = self.TransNormalTime(ymd)
             time_props[rml_norm] = ymd
-            question = re.sub(ymd,'',question)
+            question = re.sub(ymd, '', question)
         #提取月日
-        month_day = re.findall('\d+月\d+日|\d+月\d+号|\d+年\d+月',question)
+        month_day = re.findall(
+            '\d+月\d+日|\d+月\d+号|\d+年\d+月',
+            question,
+        )
         for ymd in month_day:
             rml_norm = self.TransNormalTime(ymd)
             time_props[rml_norm] = ymd
@@ -150,9 +155,8 @@ class PropExtractor(object):
             subject_props = pred_props['other_props']
             subject_props.update(pred_props['fuzzy_props'])
         return subject_props
-    
-    
-    def GetProps(self,corpus):
+
+    def GetProps(self, corpus):
         gold_num = 0
         true_num = 0
         entity_error = []
@@ -161,7 +165,6 @@ class PropExtractor(object):
         for i in range(len(corpus)):
             question = corpus[i]['question']
             gold_entitys = corpus[i]['gold_entitys']
-
 
             # 提取gold props
             gold_props = []
@@ -186,7 +189,8 @@ class PropExtractor(object):
             # 统计该模块抽取唯一主语实体的召回率
             if len(gold_props) == 1 and len(gold_entitys)==1:
                 gold_num += 1
-                if_same = self.CheckSame(gold_props,subject_props)  # 判断抽取出的属性值是否完全包括了gold props
+                # 判断抽取出的属性值是否完全包括了gold props
+                if_same = self.CheckSame(gold_props, subject_props)
                 true_num += if_same
                 if not if_same:
                     print ('主语属性值抽取失败')
@@ -203,9 +207,10 @@ class PropExtractor(object):
         print (irregular)
         return corpus
     
-    def CheckSame(self,gold_props,pred_props):
+    def CheckSame(self, gold_props, pred_props):
         pred_props_list = []
-        for p in pred_props:  # 取得是key键
+        # 取得是key键
+        for p in pred_props:
             pred_props_list.append('\"'+p+'\"')
         join_props = set(pred_props_list).intersection(set(gold_props))
         if len(join_props) == len(gold_props):
@@ -238,15 +243,25 @@ class PropExtractor(object):
         return '-'.join(elements)
 
 if __name__ == "__main__":
-    inputpaths = ['../data/entity_mentions_train.pkl','../data/entity_mentions_valid.pkl','../data/entity_mentions_test.pkl']
-    outputpaths = ['../data/all_mentions_train.pkl','../data/all_mentions_valid.pkl','../data/all_mentions_test.pkl']
+    inputpaths = [
+        '../data/entity_mentions_train.pkl',
+        '../data/entity_mentions_valid.pkl',
+        '../data/entity_mentions_test.pkl',
+    ]
+    outputpaths = [
+        '../data/all_mentions_train.pkl',
+        '../data/all_mentions_valid.pkl',
+        '../data/all_mentions_test.pkl',
+    ]
+
     starttime = time.time()
     pe = PropExtractor()
-    for i in range(1,2):
+    for i in range(0, 3):
         inputpath = inputpaths[i]
         outputpath = outputpaths[i]
-        corpus = pickle.load(open(inputpath,'rb'))
+        corpus = pickle.load(open(inputpath, 'rb'))
         corpus = pe.GetProps(corpus)
         print ('得到实体mention')
-        pickle.dump(corpus,open(outputpath,'wb'))
+        pickle.dump(corpus,open(outputpath, 'wb'))
     print('耗费时间%.2f秒'%(time.time()-starttime))
+

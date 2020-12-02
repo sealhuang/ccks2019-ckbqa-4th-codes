@@ -19,9 +19,12 @@ from keras_bert import load_trained_model_from_checkpoint
 from keras_bert import Tokenizer, get_custom_objects
 
 max_seq_len = 20
-config_path = '../../news_classifer_task/wwm/bert_config.json'
-checkpoint_path = '../../news_classifer_task/wwm/bert_model.ckpt'
-dict_path = '../../news_classifer_task/wwm/vocab.txt'
+#config_path = '../../news_classifer_task/wwm/bert_config.json'
+#checkpoint_path = '../../news_classifer_task/wwm/bert_model.ckpt'
+#dict_path = '../../news_classifer_task/wwm/vocab.txt'
+config_path = './chinese_wwm_ext_L-12_H-768_A-12/bert_config.json'
+checkpoint_path = './chinese_wwm_ext_L-12_H-768_A-12/bert_model.ckpt'
+dict_path = './chinese_wwm_ext_L-12_H-768_A-12/vocab.txt'
 
 token_dict = {}
 with codecs.open(dict_path, 'r', 'utf8') as reader:
@@ -29,15 +32,22 @@ with codecs.open(dict_path, 'r', 'utf8') as reader:
         token = line.strip()
         token_dict[token] = len(token_dict)
         
-train_corpus = pickle.load(open('../data/corpus_train.pkl','rb'))
+train_corpus = pickle.load(open('../data/corpus_train.pkl', 'rb'))
 train_questions = [train_corpus[i]['question'] for i in range(len(train_corpus))]
 train_entitys = [train_corpus[i]['gold_entitys'] for i in range(len(train_corpus))]
-train_entitys = [[entity[1:-1].split('_')[0] for entity in line]for line in train_entitys]
+train_entitys = [
+    [entity[1:-1].split('_')[0] for entity in line]
+    for line in train_entitys
+]
 
-test_corpus = pickle.load(open('../data/corpus_test.pkl','rb'))
+test_corpus = pickle.load(open('../data/corpus_test.pkl', 'rb'))
 test_questions = [test_corpus[i]['question'] for i in range(len(test_corpus))]
 test_entitys = [test_corpus[i]['gold_entitys'] for i in range(len(test_corpus))]
-test_entitys = [[entity[1:-1].split('_')[0] for entity in line]for line in test_entitys]
+test_entitys = [
+    [entity[1:-1].split('_')[0] for entity in line]
+    for line in test_entitys
+]
+
 #获取输入的token_ids和label_ids
 tokenizer = Tokenizer(token_dict)
 
@@ -54,21 +64,22 @@ def find_lcsubstr(s1, s2):
                 p=i+1
     return s1[p-mmax:p]
 
-def GetXY(questions,entitys):
+def GetXY(questions, entitys):
     X1, X2, Y = [], [], []
     for i in range(len(questions)):
         q = questions[i]
-        x1, x2 = tokenizer.encode(first=q,max_len = max_seq_len)#分别是 词索引序列和分块索引序列
+        # 分别是 词索引序列和分块索引序列
+        x1, x2 = tokenizer.encode(first=q, max_len=max_seq_len)
         y = [[0] for j in range(max_seq_len)]
         assert len(x1)==len(y)
         for e in entitys[i]:
-            #得到实体名和问题的最长连续公共子串
-            e = find_lcsubstr(e,q)
+            # 得到实体名和问题的最长连续公共子串
+            e = find_lcsubstr(e, q)
             if e in q:
-                begin = q.index(e)+1
+                begin = q.index(e) + 1
                 end = begin + len(e)
-                if end < max_seq_len-1:
-                    for pos in range(begin,end):
+                if end < max_seq_len - 1:
+                    for pos in range(begin, end):
                         y[pos] = [1]
         print (q)
         print (x1)
@@ -76,26 +87,38 @@ def GetXY(questions,entitys):
         X1.append(x1)
         X2.append(x2)
         Y.append(y)
-    return np.array(X1),np.array(X2),np.array(Y)
+    return np.array(X1), np.array(X2), np.array(Y)
 
-trainx1,trainx2,trainy = GetXY(train_questions,train_entitys)#(num_sample,max_len)
-testx1,testx2,testy = GetXY(test_questions,test_entitys)
-print (trainx1.shape)
+# GetXY return data shape (num_sample, max_len)
+trainx1, trainx2, trainy = GetXY(train_questions, train_entitys)
+testx1, testx2, testy = GetXY(test_questions, test_entitys)
+print(trainx1.shape)
 
-#搭建模型
-bert_model = load_trained_model_from_checkpoint(config_path, checkpoint_path, seq_len=None)#这里预训练的bert模型被看待为一个keras层
+# 搭建模型
+# 这里预训练的bert模型被看待为一个keras层
+bert_model = load_trained_model_from_checkpoint(
+    config_path,
+    checkpoint_path,
+    seq_len=None,
+)
 for l in bert_model.layers:
     l.trainable = True
+
 x1_in = Input(shape=(None,))
 x2_in = Input(shape=(None,))
-x = bert_model([x1_in, x2_in])#(batch,step,feature)
-x = Bidirectional(LSTM(512,return_sequences=True,recurrent_dropout=0.2))(x)
+# (batch, step, feature)
+x = bert_model([x1_in, x2_in])
+x = Bidirectional(LSTM(512, return_sequences=True, recurrent_dropout=0.2))(x)
 p = Dense(1, activation='sigmoid')(x)
 model = Model([x1_in, x2_in], p)
-model.compile(loss='binary_crossentropy',optimizer=Adam(1e-5),metrics=['accuracy'])
+model.compile(
+    loss='binary_crossentropy',
+    optimizer=Adam(1e-5),
+    metrics=['accuracy'],
+)
 model.summary()
 
-#训练模型
+# 训练模型
 maxf = 0.0
 def computeF(gold_entity,pre_entity):
     '''
@@ -139,21 +162,22 @@ def restore_entity_from_labels_on_corpus(predicty,questions):
         all_entitys.append(restore_entity_from_labels(predicty[i],questions[i]))
     return all_entitys
 
-model = load_model('../data/model/ner_model.h5', custom_objects=get_custom_objects())
 for i in range(20):
-    model.fit([trainx1,trainx2],trainy, epochs=1, batch_size=64)
-    predicty = model.predict([testx1,testx2],batch_size=64).tolist()#(num,len,1)
+    model.fit([trainx1, trainx2], trainy, epochs=1, batch_size=64)
+    predicty = model.predict([testx1, testx2], batch_size=64).tolist()#(num,len,1)
     predicty = [[1 if each[0]>0.5 else 0 for each in line] for line in predicty]
-    predict_entitys = restore_entity_from_labels_on_corpus(predicty,test_questions)
-    for j in range(300,320):
-        print (predict_entitys[j])
-        print (test_entitys[j])
-    p,r,f = computeF(test_entitys,predict_entitys)
-    print ('%d epoch f-score is %.3f'%(i,f))
+    predict_entitys = restore_entity_from_labels_on_corpus(predicty, test_questions)
+    for j in range(300, 320):
+        print(predict_entitys[j])
+        print(test_entitys[j])
+        print('-'*10)
+    p, r, f = computeF(test_entitys, predict_entitys)
+    print ('%d epoch f-score is %.3f'%(i, f))
     if f>maxf:
         model.save('../data/model/ner_model.h5')
         maxf = f
-        
+
+# test NER model
 model = load_model('../data/model/ner_model.h5', custom_objects=get_custom_objects())
 predicty = model.predict([testx1,testx2],batch_size=32).tolist()#(num,len,1)
 predicty = [[1 if each[0]>0.5 else 0 for each in line] for line in predicty]

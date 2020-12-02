@@ -9,20 +9,20 @@ import thulac
 import codecs as cs
 import numpy as np
 import tensorflow as tf
-import gensim
+#import gensim
 segger = thulac.thulac(seg_only=True)
 
 #word embedding
-chinese_embedding = {}
-with cs.open('../../token2vec/zhwiki_2017_03.sg_50d.word2vec','r','utf-8') as fp:
-    lines = fp.read().split('\n')[1:100000]
-    for line in lines:
-        line = line.strip()
-        elements = line.split(' ')
-        chinese_embedding[elements[0]] = []
-        for num in elements[1:]:
-            chinese_embedding[elements[0]].append(float(num))
-#model = gensim.models.KeyedVectors.load_word2vec_format('../../token2vec/zhwiki_2017_03.sg_50d.word2vec',binary = False)
+#chinese_embedding = {}
+#with cs.open('../../token2vec/zhwiki_2017_03.sg_50d.word2vec','r','utf-8') as fp:
+#    lines = fp.read().split('\n')[1:100000]
+#    for line in lines:
+#        line = line.strip()
+#        elements = line.split(' ')
+#        chinese_embedding[elements[0]] = []
+#        for num in elements[1:]:
+#            chinese_embedding[elements[0]].append(float(num))
+##model = gensim.models.KeyedVectors.load_word2vec_format('../../token2vec/zhwiki_2017_03.sg_50d.word2vec',binary = False)
 
 
 def ComputeSimilar(p_tokens,q_tokens,wordvec):
@@ -58,31 +58,31 @@ def ComputeSimilar(p_tokens,q_tokens,wordvec):
     return sim_cos
 
 
-def ComputeTupleFeatures(predicates,question):
-    '''
-    为每个候选tuple和问题计算人工特征
-    predicates:[r1name,r2name]或[r1name,r2name]
-    question:str
-    q_tokens:未加载词典的分词结果
-    q_chars:分字结果
-    '''
-    p_tokens = []
-    for p in predicates:
-        p_tokens.extend(segger.cut(p))
-    p_tokens = [token[0] for token in p_tokens]
-    p_chars = [char for char in ''.join(predicates)]
-    
-    q_tokens = segger.cut(question)
-    q_tokens = [token[0] for token in q_tokens]
-    q_chars = [char for char in question]
-    #计算谓词和问题的word overlap
-    word_overlap = len(set(p_tokens).intersection(set(q_tokens)))
-    #计算谓词和问题的char overlap
-    char_overlap = len(set(p_chars).intersection(set(q_chars)))
-    #向量序列相似度
-    word_similar_cos= ComputeSimilar(p_tokens,q_tokens,chinese_embedding)
-    char_similar_cos= ComputeSimilar(p_chars,q_chars,chinese_embedding)
-    return [word_overlap,word_similar_cos,char_overlap,char_similar_cos]
+#def ComputeTupleFeatures(predicates,question):
+#    '''
+#    为每个候选tuple和问题计算人工特征
+#    predicates:[r1name,r2name]或[r1name,r2name]
+#    question:str
+#    q_tokens:未加载词典的分词结果
+#    q_chars:分字结果
+#    '''
+#    p_tokens = []
+#    for p in predicates:
+#        p_tokens.extend(segger.cut(p))
+#    p_tokens = [token[0] for token in p_tokens]
+#    p_chars = [char for char in ''.join(predicates)]
+#    
+#    q_tokens = segger.cut(question)
+#    q_tokens = [token[0] for token in q_tokens]
+#    q_chars = [char for char in question]
+#    #计算谓词和问题的word overlap
+#    word_overlap = len(set(p_tokens).intersection(set(q_tokens)))
+#    #计算谓词和问题的char overlap
+#    char_overlap = len(set(p_chars).intersection(set(q_chars)))
+#    #向量序列相似度
+#    word_similar_cos= ComputeSimilar(p_tokens,q_tokens,chinese_embedding)
+#    char_similar_cos= ComputeSimilar(p_chars,q_chars,chinese_embedding)
+#    return [word_overlap,word_similar_cos,char_overlap,char_similar_cos]
 
 def features_from_two_sequences(s1,s2):
     #overlap

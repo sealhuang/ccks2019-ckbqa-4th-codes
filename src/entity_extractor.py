@@ -8,24 +8,51 @@ Created on Thu Apr  4 19:11:26 2019
 import codecs as cs
 import pickle
 import time
-from kb import GetRelations_2hop,GetRelationNum
-from utils import ComputeEntityFeatures
 import thulac
+
+from kb import GetRelations_2hop, GetRelationNum
+from utils import ComputeEntityFeatures
 
 class SubjectExtractor(object):
     def __init__(self):
-        
-        self.mention2entity_dic = pickle.load(open('../data/mention2entity_dic.pkl','rb'))
+        self.mention2entity_dic = pickle.load(
+            open('../data/mention2entity_dic.pkl', 'rb')
+        )
+
         try:                
-            self.entity2hop_dic = pickle.load(open('../data/entity2hop_dic.pkl','rb'))
+            self.entity2hop_dic = pickle.load(open('../data/entity2hop_dic.pkl', 'rb'))
         except:
             self.entity2hop_dic = {}
-        self.word_2_frequency = self.LoadWord2Index('../../token2vec/SouGou_word_frequece/SogouLabDic.dic')
+
+        self.word_2_frequency = self.LoadWord2Index(
+            './sogou_word_frequence/SogouLabDic.dic'
+            #'../../token2vec/SouGou_word_frequece/SogouLabDic.dic'
+        )
         self.not_pos = {'f','d','h','k','r','c','p','u','y','e','o','g','w','m'}  # 'q','mq','v','a','t',
         self.segger = thulac.thulac()
-        self.pass_mention_dic = {'是什么','在哪里','哪里','什么','提出的','有什么','国家','哪个','所在',
-                                 '培养出','为什么','什么时候','人','你知道','都包括','是谁','告诉我','又叫做','有','是'}
-        self.fp = cs.open('../data/record/entity_extractor_ans.txt','w')
+        self.pass_mention_dic = {
+            '是什么',
+            '在哪里',
+            '哪里',
+            '什么',
+            '提出的',
+            '有什么',
+            '国家',
+            '哪个',
+            '所在',
+            '培养出',
+            '为什么',
+            '什么时候',
+            '人',
+            '你知道',
+            '都包括',
+            '是谁',
+            '告诉我',
+            '又叫做',
+            '有',
+            '是',
+        }
+        self.fp = cs.open('../data/record/entity_extractor_ans.txt', 'w')
         print ('entity extractor loaded')
     
     def LoadWord2Index(self,path):
@@ -175,13 +202,23 @@ class SubjectExtractor(object):
         return corpus
 
 if __name__ == '__main__':
-    inputpaths = ['../data/all_mentions_train.pkl','../data/all_mentions_valid.pkl','../data/all_mentions_test.pkl']
-    outputpaths = ['../data/candidate_entitys_train.pkl','../data/candidate_entitys_valid.pkl','../data/candidate_entitys_test.pkl']
+    inputpaths = [
+        '../data/all_mentions_train.pkl',
+        '../data/all_mentions_valid.pkl',
+        '../data/all_mentions_test.pkl',
+    ]
+    outputpaths = [
+        '../data/candidate_entitys_train.pkl',
+        '../data/candidate_entitys_valid.pkl',
+        '../data/candidate_entitys_test.pkl',
+    ]
+
     se = SubjectExtractor()
     for i in range(len(inputpaths)):
         inputpath = inputpaths[i]
         outputpath = outputpaths[i]
-        corpus = pickle.load(open(inputpath,'rb'))
+        corpus = pickle.load(open(inputpath, 'rb'))
         corpus = se.GetCandidateEntity(corpus)
-        pickle.dump(corpus,open(outputpath,'wb'))
+        pickle.dump(corpus, open(outputpath, 'wb'))
     se.fp.close()
+
