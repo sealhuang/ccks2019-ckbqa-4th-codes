@@ -84,17 +84,17 @@ def ComputeSimilar(p_tokens,q_tokens,wordvec):
 #    char_similar_cos= ComputeSimilar(p_chars,q_chars,chinese_embedding)
 #    return [word_overlap,word_similar_cos,char_overlap,char_similar_cos]
 
-def features_from_two_sequences(s1,s2):
-    #overlap
+def features_from_two_sequences(s1, s2):
+    # overlap
     overlap = len(set(s1)&(set(s2)))
-    #集合距离
+    # 集合距离
     jaccard = len(set(s1)&(set(s2))) / len(set(s1)|(set(s2)))
-    #词向量相似度
+    # 词向量相似度
     #wordvecsim = model.similarity(''.join(s1),''.join(s2))
-    return [overlap,jaccard]
+    return [overlap, jaccard]
 
-def ComputeEntityFeatures(question,entity,relations):
-    '''
+def ComputeEntityFeatures(question, entity, relations):
+    """
     抽取每个实体或属性值2hop内的所有关系，来跟问题计算各种相似度特征
     input:
         question: python-str
@@ -102,8 +102,8 @@ def ComputeEntityFeatures(question,entity,relations):
         relations: python-dic key:<rname>
     output：
         [word_overlap,char_overlap,word_embedding_similarity,char_overlap_ratio]
-    '''
-    #得到主语-谓词的tokens及chars
+    """
+    # 得到主语-谓词的tokens及chars
     p_tokens = []
     for p in relations:
         p_tokens.extend(segger.cut(p[1:-1]))
@@ -118,10 +118,16 @@ def ComputeEntityFeatures(question,entity,relations):
     e_tokens = [token[0] for token in e_tokens]
     e_chars = [char for char in entity[1:-1]]
     
-    qe_feature = features_from_two_sequences(q_tokens,e_tokens) + features_from_two_sequences(q_chars,e_chars)
-    qr_feature = features_from_two_sequences(q_tokens,p_tokens) + features_from_two_sequences(q_chars,p_chars)
-    #实体名和问题的overlap除以实体名长度的比例
-    return qe_feature+qr_feature
+    qe_feature = features_from_two_sequences(q_tokens, e_tokens) + \
+                 features_from_two_sequences(q_chars, e_chars)
+    qr_feature = features_from_two_sequences(q_tokens, p_tokens) + \
+                 features_from_two_sequences(q_chars, p_chars)
+    # 实体名和问题的overlap除以实体名长度的比例
+    return qe_feature + qr_feature
 
 if __name__ == '__main__':
-    print (ComputeEntityFeatures('高谭市的守护者的中文名是什么？','<高谭市>',['<守护者>']))
+    print (ComputeEntityFeatures(
+        '高谭市的守护者的中文名是什么？',
+        '<高谭市>',
+        ['<守护者>'],
+    ))

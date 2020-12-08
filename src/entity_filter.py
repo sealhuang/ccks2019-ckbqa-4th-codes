@@ -1,27 +1,34 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Fri Apr  5 09:20:27 2019
 
 @author: cmy
 """
 
+import numpy as np
 import pickle
 from sklearn import linear_model
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import tree
-import numpy as np
-'''该模块目的是从所有候选实体中筛选出topn个候选实体,并保证正确实体在其中'''
-def GetData(corpus,mode):
-    '''从语料中提取训练和预测需要的数据
-    X : numpy.array, (num_sample,num_feature)
-    Y : numpy.array, (num_sample,1)
+
+"""
+该模块目的是从所有候选实体中筛选出topn个候选实体,并保证正确实体在其中
+"""
+
+def GetData(corpus, mode):
+    """
+    从语料中提取训练和预测需要的数据
+    X : numpy.array, (num_sample, num_feature)
+    Y : numpy.array, (num_sample, 1)
     samples : python-list,(num_sample,)
     gold_tuple : python-list, (num_question,1)
     question2sample : python-dict, key:questionindex , value:sampleindexs
     mode : python-str
-    '''
+    """
     X = []
     Y = []
     samples = []
@@ -61,8 +68,6 @@ def GetData(corpus,mode):
     X = np.array(X,dtype='float32')
     Y = np.array(Y,dtype='float32')
     return X,Y,samples,gold_entitys,question2sample
-
-
 
 def GetPredictEntitys(prepro,samples,question2sample,topn):
     '''
@@ -128,12 +133,22 @@ def SaveFilterCandiE(corpus,predict_entitys):
     return corpus
 
 if __name__ == '__main__':
-    valid_corpus = pickle.load(open('../data/candidate_entitys_valid.pkl','rb'))
-    train_corpus = pickle.load(open('../data/candidate_entitys_train.pkl','rb'))
-    
+    train_corpus = pickle.load(
+        open('../data/candidate_entitys_train.pkl','rb')
+    )
+    valid_corpus = pickle.load(
+        open('../data/candidate_entitys_valid.pkl', 'rb')
+    )
+ 
     #(numsample,feature),(numsample,1),(numsample,)
-    x_train,y_train,samples_train,gold_entitys_train,question2sample_train = GetData(train_corpus,'train')
-    x_valid,y_valid,samples_valid,gold_entitys_valid,question2sample_valid = GetData(valid_corpus,'valid')
+    x_train,y_train,samples_train,gold_entitys_train,question2sample_train = GetData(
+        train_corpus,
+        'train',
+    )
+    x_valid,y_valid,samples_valid,gold_entitys_valid,question2sample_valid = GetData(
+        valid_corpus,
+        'valid',
+    )
     print(x_train.shape)
     #逻辑回归
     model = linear_model.LogisticRegression(C=1e5)

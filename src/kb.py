@@ -62,7 +62,9 @@ def GetRelations_2hop(entity):
     return dic
 
 def GetRelationNum(entity):
-    '''根据实体名，得到与之相连的关系数量，代表实体在知识库中的流行度'''
+    """
+    根据实体名，得到与之相连的关系数量，代表实体在知识库中的流行度.
+    """
     cql= "match p=(a:Entity)-[r1:Relation]-() where a.name=$name return count(p)"
     res = session.run(cql,name=entity)
     ans = 0

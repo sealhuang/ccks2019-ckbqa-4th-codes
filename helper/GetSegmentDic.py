@@ -12,7 +12,7 @@ import pickle
 
 segment_dic = {}
 
-with open('../PKUBASE/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
+with open('../pkubase/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
     for line in fp:
         if line:
             entity = line.split('\t')[0]
@@ -21,7 +21,7 @@ with open('../PKUBASE/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
                 ename = ename.split('_')[0]
             segment_dic[ename] = 1
 
-with open('../PKUBASE/pkubase-mention2ent.txt', 'r', encoding='utf-8') as fp:
+with open('../pkubase/pkubase-mention2ent.txt', 'r', encoding='utf-8') as fp:
     for line in fp:
         if line:
             ename = line.split('\t')[0]
@@ -39,7 +39,7 @@ with open('../data/segment_dic.txt', 'w', encoding='utf-8') as fp:
 #    fp.write(content[:-1])
         
 prop_dic = {}
-with open('../PKUBASE/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
+with open('../pkubase/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
     for line in fp:
         if line:
             try:
@@ -53,4 +53,4 @@ with open('../PKUBASE/pkubase-full-new.txt', 'r', encoding='utf-8') as fp:
             except:
                 continue
             
-pickle.dump(prop_dic,open('../data/prop_dic.pkl','wb'))
+pickle.dump(prop_dic, open('../data/prop_dic.pkl','wb'))
