@@ -153,19 +153,27 @@ if __name__ == '__main__':
     #逻辑回归
     model = linear_model.LogisticRegression(C=1e5)
     model.fit(x_train, y_train)
-    pickle.dump(model,open('../data/model/entity_classifer_model.pkl','wb'))
+    pickle.dump(model, open('../data/model/entity_classifer_model.pkl','wb'))
     y_predict = model.predict_proba(x_valid).tolist()
     
     topns = [1,2,3,5,6,7,8,9,10,15,20]
     #topns = [5]
     #得到候选实体
     for topn in topns:
-        predict_entitys= GetPredictEntitys(y_predict,samples_valid,question2sample_valid,topn)
+        predict_entitys = GetPredictEntitys(
+            y_predict,
+            samples_valid,
+            question2sample_valid,
+            topn,
+        )
         #判断候选实体的准确性，只要有一个在真正实体中即可
-        precision_topn_one,precision_topn_all,wrong_list= ComputePrecision(gold_entitys_valid,predict_entitys) 
-        print ('在验证集上逻辑回归top%d筛选后，所有问题实体召回率为%.3f，单实体问题实体召回率%.3f'%(topn,precision_topn_all,precision_topn_one))
+        precision_topn_one, precision_topn_all, wrong_list = ComputePrecision(
+            gold_entitys_valid,
+            predict_entitys,
+        ) 
+        print ('在验证集上逻辑回归top%d筛选后，所有问题实体召回率为%.3f，单实体问题实体召回率%.3f'%(topn, precision_topn_all, precision_topn_one))
     #将筛选后的候选实体写入corpus并保存
-    valid_corpus = SaveFilterCandiE(valid_corpus,predict_entitys)
+    valid_corpus = SaveFilterCandiE(valid_corpus, predict_entitys)
     
     y_predict = model.predict_proba(x_train).tolist()
     predict_entitys = GetPredictEntitys(y_predict,samples_train,question2sample_train,topn)
