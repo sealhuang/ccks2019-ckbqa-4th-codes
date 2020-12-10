@@ -1,15 +1,17 @@
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 import os
+import args
+import collections
 from queue import Queue
 from threading import Thread
 
 import pandas as pd
 import tensorflow as tf
-import collections
-import args
+
 import tokenization
 import modeling
 import optimization
-
 
 
 class InputExample(object):
@@ -676,3 +678,4 @@ if __name__ == '__main__':
         sentence2 = input('sentence2: ')
         predict = sim.predict(sentence1, sentence2)
         print('similarity：',{predict[0][1]})
+

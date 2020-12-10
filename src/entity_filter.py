@@ -35,14 +35,14 @@ def GetData(corpus, mode):
     gold_entitys = []
     question2sample = {}
     sample_index = 0
-    
+ 
     true_num = 0
     one_num = 0
     one_true_num = 0
     for i in range(len(corpus)):
         candidate_entitys = corpus[i]['candidate_entity']
         gold_entity = corpus[i]['gold_entitys']
-        
+ 
         candidate_entitys_list = [each for each in candidate_entitys]
         if len(gold_entity) == len(set(gold_entity).intersection(set(candidate_entitys_list))):
             true_num += 1
@@ -54,23 +54,28 @@ def GetData(corpus, mode):
         q_sample_indexs = []
         for e in candidate_entitys:
             features = candidate_entitys[e]
-            X.append(features[1:])  # 第0个特征是该实体对应的mention 
+            # 第0个特征是该实体对应的mention 
+            X.append(features[1:])
             if e in gold_entity:
                 Y.append([1])
             else:
                 Y.append([0])
             samples.append(e)
             q_sample_indexs.append(sample_index)
-            sample_index+=1
+            sample_index += 1
         gold_entitys.append(gold_entity)
-        question2sample[i] = q_sample_indexs  # 每个问题i对应的sample index
-    print ('所有问题候选主语召回率为：%.3f 其中单主语问题为：%.3f'%(true_num/len(corpus),one_true_num/one_num))
-    X = np.array(X,dtype='float32')
-    Y = np.array(Y,dtype='float32')
-    return X,Y,samples,gold_entitys,question2sample
+        # 每个问题i对应的sample index
+        question2sample[i] = q_sample_indexs
+    print(
+        '所有问题候选主语召回率为：%.3f 其中单主语问题为：%.3f' % 
+            (true_num/len(corpus), one_true_num/one_num)
+    )
+    X = np.array(X, dtype='float32')
+    Y = np.array(Y, dtype='float32')
+    return X, Y, samples, gold_entitys, question2sample
 
-def GetPredictEntitys(prepro,samples,question2sample,topn):
-    '''
+def GetPredictEntitys(prepro, samples, question2sample, topn):
+    """
     得到问题对应的样本，对它们按照概率进行排序，选取topn作为筛选后的候选实体
     对于属性值，只保留排名前3位的
     input:
@@ -80,7 +85,7 @@ def GetPredictEntitys(prepro,samples,question2sample,topn):
         topn : int
     output:
         predict_entitys : list [[str]]
-    '''
+    """
     predict_entitys = []
     for i in range(len(question2sample)):
         sample_indexs = question2sample[i]
@@ -123,7 +128,7 @@ def ComputePrecision(gold_entitys,predict_entitys):
             
     return float(one_true_num)/one_num,true_num/len(gold_entitys),wrong_list
 
-def SaveFilterCandiE(corpus,predict_entitys):
+def SaveFilterCandiE(corpus, predict_entitys):
     for i in range(len(corpus)):
         candidate_entity_filter = {}
         for e in predict_entitys[i]:
@@ -134,31 +139,31 @@ def SaveFilterCandiE(corpus,predict_entitys):
 
 if __name__ == '__main__':
     train_corpus = pickle.load(
-        open('../data/candidate_entitys_train.pkl','rb')
+        open('../data/candidate_entitys_train.pkl', 'rb')
     )
     valid_corpus = pickle.load(
         open('../data/candidate_entitys_valid.pkl', 'rb')
     )
  
-    #(numsample,feature),(numsample,1),(numsample,)
-    x_train,y_train,samples_train,gold_entitys_train,question2sample_train = GetData(
+    # (numsample,feature), (numsample,1), (numsample,)
+    x_train, y_train, samples_train, gold_entitys_train, question2sample_train = GetData(
         train_corpus,
         'train',
     )
-    x_valid,y_valid,samples_valid,gold_entitys_valid,question2sample_valid = GetData(
+    x_valid, y_valid, samples_valid, gold_entitys_valid, question2sample_valid = GetData(
         valid_corpus,
         'valid',
     )
     print(x_train.shape)
-    #逻辑回归
+    # 逻辑回归
     model = linear_model.LogisticRegression(C=1e5)
     model.fit(x_train, y_train)
-    pickle.dump(model, open('../data/model/entity_classifer_model.pkl','wb'))
+    pickle.dump(model, open('../data/model/entity_classifer_model.pkl', 'wb'))
     y_predict = model.predict_proba(x_valid).tolist()
-    
-    topns = [1,2,3,5,6,7,8,9,10,15,20]
+ 
+    topns = [1, 2, 3, 5, 6, 7, 8, 9, 10, 15, 20]
     #topns = [5]
-    #得到候选实体
+    # 得到候选实体
     for topn in topns:
         predict_entitys = GetPredictEntitys(
             y_predict,
@@ -171,14 +176,19 @@ if __name__ == '__main__':
             gold_entitys_valid,
             predict_entitys,
         ) 
-        print ('在验证集上逻辑回归top%d筛选后，所有问题实体召回率为%.3f，单实体问题实体召回率%.3f'%(topn, precision_topn_all, precision_topn_one))
+        print('在验证集上逻辑回归top%d筛选后，所有问题实体召回率为%.3f，单实体问题实体召回率%.3f'%(topn, precision_topn_all, precision_topn_one))
     #将筛选后的候选实体写入corpus并保存
     valid_corpus = SaveFilterCandiE(valid_corpus, predict_entitys)
     
     y_predict = model.predict_proba(x_train).tolist()
-    predict_entitys = GetPredictEntitys(y_predict,samples_train,question2sample_train,topn)
-    train_corpus = SaveFilterCandiE(train_corpus,predict_entitys)
+    predict_entitys = GetPredictEntitys(
+        y_predict,
+        samples_train,
+        question2sample_train,
+        topn,
+    )
+    train_corpus = SaveFilterCandiE(train_corpus, predict_entitys)
     
-    pickle.dump(valid_corpus,open('../data/candidate_entitys_filter_valid.pkl','wb'))
-    pickle.dump(train_corpus,open('../data/candidate_entitys_filter_train.pkl','wb'))
+    pickle.dump(valid_corpus, open('../data/candidate_entitys_filter_valid.pkl', 'wb'))
+    pickle.dump(train_corpus, open('../data/candidate_entitys_filter_train.pkl', 'wb'))
     
