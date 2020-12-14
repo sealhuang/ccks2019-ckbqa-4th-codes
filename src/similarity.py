@@ -1,7 +1,6 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
 import os
-import args
 import collections
 from queue import Queue
 from threading import Thread
@@ -9,6 +8,7 @@ from threading import Thread
 import pandas as pd
 import tensorflow as tf
 
+import args
 import tokenization
 import modeling
 import optimization
@@ -75,7 +75,9 @@ class SimProcessor(DataProcessor):
             text_a = tokenization.convert_to_unicode(str(train[0]))
             text_b = tokenization.convert_to_unicode(str(train[1]))
             label = str(train[2])
-            train_data.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            train_data.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+            )
         return train_data
 
     def get_dev_examples(self, data_dir):
@@ -87,7 +89,9 @@ class SimProcessor(DataProcessor):
             text_a = tokenization.convert_to_unicode(str(dev[0]))
             text_b = tokenization.convert_to_unicode(str(dev[1]))
             label = str(dev[2])
-            dev_data.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            dev_data.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+            )
         return dev_data
 
     def get_test_examples(self, data_dir):
@@ -99,7 +103,9 @@ class SimProcessor(DataProcessor):
             text_a = tokenization.convert_to_unicode(str(test[0]))
             text_b = tokenization.convert_to_unicode(str(test[1]))
             label = str(test[2])
-            test_data.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            test_data.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+            )
         return test_data
 
     def get_sentence_examples(self, questions):
@@ -115,11 +121,14 @@ class SimProcessor(DataProcessor):
 
 
 class BertSim:
-
+    """Compute sentence similarity based on Bert."""
     def __init__(self, batch_size=args.batch_size):
         self.mode = None
         self.max_seq_length = args.max_seq_len
-        self.tokenizer = tokenization.FullTokenizer(vocab_file=args.vocab_file, do_lower_case=True)
+        self.tokenizer = tokenization.FullTokenizer(
+            vocab_file=args.vocab_file,
+            do_lower_case=True,
+        )
         self.batch_size = batch_size
         self.estimator = None
         self.processor = SimProcessor()
@@ -284,8 +293,12 @@ class BertSim:
         config.gpu_options.per_process_gpu_memory_fraction = args.gpu_memory_fraction
         config.log_device_placement = False
 
-        return Estimator(model_fn=model_fn, config=RunConfig(session_config=config), model_dir=args.output_dir,
-                         params={'batch_size': self.batch_size})
+        return Estimator(
+            model_fn=model_fn,
+            config=RunConfig(session_config=config),
+            model_dir=args.output_dir,
+            params={'batch_size': self.batch_size}
+        )
 
     def predict_from_queue(self):
         for i in self.estimator.predict(input_fn=self.queue_predict_input_fn, yield_single_examples=False):

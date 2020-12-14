@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Mon Apr  1 10:26:35 2019
 
 @author: cmy
 """
 
-import pickle
-from sklearn import linear_model
-import numpy as np
 import random
+import pickle
+import numpy as np
+from sklearn import linear_model
+from sklearn.preprocessing import StandardScaler
+from sklearn.externals import joblib
+
 from nn_utils import cmp
+
 
 def GetData(corpus):
     '''为验证集验证模型使用的数据
@@ -72,16 +78,17 @@ def GetData(corpus):
     return X,Y,samples,ans,gold_tuples,question2sample
 
 def GetData_train(corpus):
-    '''
-    为训练集的候选答案生成逻辑回归训练数据，由于正负例非常不均衡，对于负例进行0.05的采样
-    '''
+    """
+    为训练集的候选答案生成逻辑回归训练数据，由于正负例非常不均衡，
+    对于负例进行0.05的采样
+    """
     X = []
     Y = []
     true_num = 0
     hop2_num = 0
     hop2_true_num = 0
     for i in range(len(corpus)):
-        candidate_tuples = corpus[i]['candidate_tuples']#字典
+        candidate_tuples = corpus[i]['candidate_tuples']
         gold_tuple = corpus[i]['gold_tuple']
         gold_entitys = corpus[i]['gold_entitys']
         
@@ -92,13 +99,15 @@ def GetData_train(corpus):
                 Y.append([1])
             else:
                 prop = random.random()
-                if prop<0.5:
+                # XXX: 0.05 sampling
+                if prop<0.05:
                     X.append([features[2]])
                     Y.append([0])
-        
-        if_true = 0#判断答案是否召回
+
+        # 判断答案是否召回
+        if_true = 0
         for thistuple in candidate_tuples:
-            if cmp(thistuple,gold_tuple)==0:
+            if cmp(thistuple, gold_tuple)==0:
                 if_true = 1
                 break
         if if_true == 1:
@@ -108,10 +117,11 @@ def GetData_train(corpus):
         if len(gold_tuple) <=3 and len(gold_entitys) == 1:
             hop2_num += 1
         
-    X = np.array(X,dtype='float32')
-    Y = np.array(Y,dtype='float32')
+    X = np.array(X, dtype='float32')
+    Y = np.array(Y, dtype='float32')
     print('单实体问题中，候选答案可召回的的比例为:%.3f'%(hop2_true_num/hop2_num))
     print('候选答案能覆盖标准查询路径的比例为:%.3f'%(true_num/len(corpus)))
+
     return X,Y
 
 def GetPredictTuples(prepro,samples,question2sample,topn):
@@ -170,44 +180,77 @@ def SaveFilterCandiT(corpus,predict_tuples):
 
 
 if __name__ == '__main__':
-    valid_path = '../data/candidate_tuples_valid.pkl'
-    valid_corpus = pickle.load(open(valid_path,'rb'))
     train_path = '../data/candidate_tuples_train.pkl'
-    train_corpus = pickle.load(open(train_path,'rb'))
-    
-    x_train,y_train = GetData_train(train_corpus)
-    x_valid,y_valid,samples_valid,ans_valid,gold_tuples_valid,question2sample_valid = GetData(valid_corpus)
-    #逻辑回归
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.externals import joblib
+    train_corpus = pickle.load(open(train_path, 'rb'))
+    x_train, y_train = GetData_train(train_corpus)
+ 
+    # 逻辑回归
     sc = StandardScaler()
     sc.fit(x_train)
     joblib.dump(sc, '../data/tuple_scaler')
     x_train = sc.transform(x_train)
-    x_valid = sc.transform(x_valid)
     model = linear_model.LogisticRegression(C=1e5)
     model.fit(x_train, y_train)
     print (model.coef_)
-    pickle.dump(model,open('../data/model/tuple_classifer_model.pkl','wb'))
+    pickle.dump(model, open('../data/model/tuple_classifer_model.pkl', 'wb'))
+
+    valid_path = '../data/candidate_tuples_valid.pkl'
+    valid_corpus = pickle.load(open(valid_path, 'rb'))
+    x_valid,y_valid,samples_valid,ans_valid,gold_tuples_valid,question2sample_valid = GetData(valid_corpus)
+    x_valid = sc.transform(x_valid)
     y_predict = model.predict_proba(x_valid).tolist()
-    
+ 
     #topns = [1,5,10,20,30,50,100]
     topns = [10]
     for topn in topns:
-        predict_tuples_valid,predict_props_valid = GetPredictTuples(y_predict,samples_valid,question2sample_valid,topn)
-        precision_topn = ComputePrecision(gold_tuples_valid,predict_tuples_valid,predict_props_valid)
+        predict_tuples_valid, predict_props_valid = GetPredictTuples(
+            y_predict,
+            samples_valid,
+            question2sample_valid,
+            topn,
+        )
+        precision_topn = ComputePrecision(
+            gold_tuples_valid,
+            predict_tuples_valid,
+            predict_props_valid,
+        )
         print ('在验证集上逻辑回归筛选后top%d 召回率为%.2f'%(topn,precision_topn))
-        
-    SaveFilterCandiT(valid_corpus,predict_tuples_valid)
+ 
+    SaveFilterCandiT(valid_corpus, predict_tuples_valid)
+    pickle.dump(
+        valid_corpus,
+        open('../data/candidate_tuples_filter_valid.pkl', 'wb'),
+    )
     
     x_train,y_train,samples_train,ans_train,gold_tuples_train,question2sample_train = GetData(train_corpus)
+    x_train = sc.transform(x_train)
     y_predict = model.predict_proba(x_train).tolist()
-    predict_tuples_train,predict_props_train = GetPredictTuples(y_predict,samples_train,question2sample_train,topn)
-    SaveFilterCandiT(train_corpus,predict_tuples_train)
-    
-    pickle.dump(valid_corpus,open('../data/candidate_tuples_filter_valid.pkl','wb'))
-    pickle.dump(train_corpus,open('../data/candidate_tuples_filter_train.pkl','wb'))
-    
-    
-    
-    
+    predict_tuples_train, predict_props_train = GetPredictTuples(
+        y_predict,
+        samples_train,
+        question2sample_train,
+        topn,
+    )
+    SaveFilterCandiT(train_corpus, predict_tuples_train)
+    pickle.dump(
+        train_corpus,
+        open('../data/candidate_tuples_filter_train.pkl','wb'),
+    )
+ 
+    test_path = '../data/candidate_tuples_test.pkl'
+    test_corpus = pickle.load(open(test_path, 'rb'))
+    x_test,y_test,samples_test,ans_test,gold_tuples_test,question2sample_test = GetData(test_corpus)
+    x_test = sc.transform(x_test)
+    y_predict = model.predict_proba(x_test).tolist()
+    predict_tuples_test, predict_props_test = GetPredictTuples(
+        y_predict,
+        samples_test,
+        question2sample_test,
+        topn,
+    )
+    SaveFilterCandiT(test_corpus, predict_tuples_test)
+    pickle.dump(
+        test_corpus,
+        open('../data/candidate_tuples_filter_test.pkl','wb'),
+    )
+ 

@@ -138,29 +138,34 @@ def SaveFilterCandiE(corpus, predict_entitys):
     return corpus
 
 if __name__ == '__main__':
+    # load training dataset
     train_corpus = pickle.load(
         open('../data/candidate_entitys_train.pkl', 'rb')
     )
-    valid_corpus = pickle.load(
-        open('../data/candidate_entitys_valid.pkl', 'rb')
-    )
- 
+
     # (numsample,feature), (numsample,1), (numsample,)
     x_train, y_train, samples_train, gold_entitys_train, question2sample_train = GetData(
         train_corpus,
         'train',
     )
+    print(x_train.shape)
+
+    # train a logistic classification model
+    model = linear_model.LogisticRegression(C=1e5)
+    model.fit(x_train, y_train)
+    pickle.dump(model, open('../data/model/entity_classifer_model.pkl', 'wb'))
+
+    # load validation dataset and evaluate the model
+    valid_corpus = pickle.load(
+        open('../data/candidate_entitys_valid.pkl', 'rb')
+    )
+ 
     x_valid, y_valid, samples_valid, gold_entitys_valid, question2sample_valid = GetData(
         valid_corpus,
         'valid',
     )
-    print(x_train.shape)
-    # 逻辑回归
-    model = linear_model.LogisticRegression(C=1e5)
-    model.fit(x_train, y_train)
-    pickle.dump(model, open('../data/model/entity_classifer_model.pkl', 'wb'))
+
     y_predict = model.predict_proba(x_valid).tolist()
- 
     topns = [1, 2, 3, 5, 6, 7, 8, 9, 10, 15, 20]
     #topns = [5]
     # 得到候选实体
@@ -177,9 +182,11 @@ if __name__ == '__main__':
             predict_entitys,
         ) 
         print('在验证集上逻辑回归top%d筛选后，所有问题实体召回率为%.3f，单实体问题实体召回率%.3f'%(topn, precision_topn_all, precision_topn_one))
-    #将筛选后的候选实体写入corpus并保存
+    # 将筛选后的候选实体写入corpus并保存
     valid_corpus = SaveFilterCandiE(valid_corpus, predict_entitys)
-    
+    pickle.dump(valid_corpus, open('../data/candidate_entitys_filter_valid.pkl', 'wb'))
+
+    # save filtered entities from training dataset
     y_predict = model.predict_proba(x_train).tolist()
     predict_entitys = GetPredictEntitys(
         y_predict,
@@ -188,7 +195,25 @@ if __name__ == '__main__':
         topn,
     )
     train_corpus = SaveFilterCandiE(train_corpus, predict_entitys)
-    
-    pickle.dump(valid_corpus, open('../data/candidate_entitys_filter_valid.pkl', 'wb'))
     pickle.dump(train_corpus, open('../data/candidate_entitys_filter_train.pkl', 'wb'))
-    
+   
+    # get filtered entities from test dataset
+    test_corpus = pickle.load(
+        open('../data/candidate_entitys_test.pkl', 'rb')
+    )
+
+    x_test, y_test, samples_test, gold_entitys_test, question2sample_test = GetData(
+        test_corpus,
+        'test',
+    )
+
+    y_predict = model.predict_proba(x_test).tolist()
+    predict_entitys = GetPredictEntitys(
+        y_predict,
+        samples_test,
+        question2sample_test,
+        topn,
+    )
+    test_corpus = SaveFilterCandiE(test_corpus, predict_entitys)
+    pickle.dump(test_corpus, open('../data/candidate_entitys_filter_test.pkl', 'wb'))
+

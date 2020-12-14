@@ -1,3 +1,5 @@
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 import os
 import tensorflow as tf
 
@@ -5,12 +7,13 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 file_path = os.path.dirname(__file__)
 
-model_dir = os.path.join(file_path, 'chinese_L-12_H-768_A-12/')
+#model_dir = os.path.join(file_path, 'chinese_L-12_H-768_A-12/')
+model_dir = os.path.join(file_path, 'chinese_wwm_ext_L-12_H-768_A-12')
 config_name = os.path.join(model_dir, 'bert_config.json')
 ckpt_name = os.path.join(model_dir, 'bert_model.ckpt')
-output_dir = os.path.join(model_dir, '../tmp/result/')
 vocab_file = os.path.join(model_dir, 'vocab.txt')
 data_dir = os.path.join(model_dir, '../data/')
+output_dir = os.path.join(model_dir, '../tmp/result/')
 
 num_train_epochs = 10
 batch_size = 64
