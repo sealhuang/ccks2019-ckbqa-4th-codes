@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 """
 Created on Mon Jul 29 09:17:41 2019
 
 @author: Administrator
 """
 
+import re
 import codecs as cs
 import pickle
 import numpy as np
+from sklearn.externals import joblib
+import thulac
+
 from mention_extractor import MentionExtractor
 from prop_extractor import PropExtractor
 from entity_extractor import SubjectExtractor
 from tuple_extractor import TupleExtractor
-from kb import session,GetTwoEntityTuple
-from sklearn.externals import joblib
-import re
-import thulac
+from kb import session, GetTwoEntityTuple
 
 class AnswerByPkubase(object):
     def __init__(self,):
@@ -274,7 +277,9 @@ class AnswerByPkubase(object):
 
 if __name__ == '__main__':
     ansbot = AnswerByPkubase()
-    corpus = pickle.load(open('../data/candidate_entitys_filter_test.pkl','rb'))
+    corpus = pickle.load(
+        open('../data/candidate_entitys_filter_test.pkl','rb')
+    )
     corpus = ansbot.add_answers_to_corpus(corpus)
     #pickle.dump(ansbot.te.sentencepair2sim,open('../data/sentencepair2sim_dic.pkl','wb'))
     
