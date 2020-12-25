@@ -21,21 +21,31 @@ from tuple_extractor import TupleExtractor
 from kb import session, GetTwoEntityTuple
 
 class AnswerByPkubase(object):
-    def __init__(self,):
-        
-        
+    def __init__(self):
         self.te = TupleExtractor()
         self.me = MentionExtractor()
         self.se = SubjectExtractor()
         self.pe = PropExtractor()
         self.topn_e = 5
         self.topn_t = 3
-        
-        self.subject_classifer_model = pickle.load(open('../data/model/entity_classifer_model.pkl','rb'))
-        self.tuple_classifer_model = pickle.load(open('../data/model/tuple_classifer_model.pkl','rb'))
-        
+ 
+        self.subject_classifer_model = pickle.load(
+            open('../data/model/entity_classifer_model.pkl', 'rb')
+        )
+        self.tuple_classifer_model = pickle.load(
+            open('../data/model/tuple_classifer_model.pkl', 'rb')
+        )
+
         self.segger = thulac.thulac()
-        self.not_relation = {'<中文名>','<外文名>','<本名>','<别名>','<国籍>','<职业>'}#双实体问题桥接不考虑的关系
+        #双实体问题桥接不考虑的关系
+        self.not_relation = {
+            '<中文名>',
+            '<外文名>',
+            '<本名>',
+            '<别名>',
+            '<国籍>',
+            '<职业>',
+        }
         
     def LoadMentionDic(self):
         with cs.open('../PKUBASE/pkubase-mention2ent.txt','r','utf-8') as fp:
@@ -166,16 +176,17 @@ class AnswerByPkubase(object):
                 max_ = f
         return ans
     
-    def answer_main(self,question):
-        '''
+    def answer_main(self, question):
+        """
         输入问题，依次执行：
-        抽取实体mention、抽取属性值、生成候选实体并得到特征、候选实体过滤、生成候选查询路径（单实体双跳）、候选查询路径过滤
+        抽取实体mention、抽取属性值、生成候选实体并得到特征、候选实体过滤、
+        生成候选查询路径（单实体双跳）、候选查询路径过滤、
         使用top1的候选查询路径检索答案并返回
         input:
             question : python-str
         output:
             answer : python-list, [str]
-        '''
+        """
         dic = {}
         question = re.sub('在金庸的小说《天龙八部》中，','',question)
         question = re.sub('电视剧武林外传里','',question)
@@ -187,18 +198,18 @@ class AnswerByPkubase(object):
         question = re.sub('英文','外文',question)
         question = re.sub('英语','外文',question)
         dic['question'] = question
-        print (question)
+        print(question)
         
         mentions = self.me.extract_mentions(question)
         dic['mentions'] = mentions
-        print ('====实体mention为====')
-        print (mentions.keys())
+        print('====实体mention为====')
+        print(mentions.keys())
         
-        props= self.pe.extract_properties(question)
-        subject_props,special_props = self.add_props(mentions,props)
+        props = self.pe.extract_properties(question)
+        subject_props, special_props = self.add_props(mentions, props)
         dic['props'] = subject_props
-        print ('====属性mention为====')
-        print (subject_props.keys())
+        print('====属性mention为====')
+        print(subject_props.keys())
         
         subjects = self.se.extract_subject(mentions,subject_props,question)
         dic['subjects'] = subjects
@@ -265,9 +276,7 @@ class AnswerByPkubase(object):
         print ('\n')
         return answer
 
-        
-    def add_answers_to_corpus(self,corpus):
-        
+    def add_answers_to_corpus(self, corpus):
         for i in range(len(corpus)):
             sample = corpus[i]
             question = sample['question']

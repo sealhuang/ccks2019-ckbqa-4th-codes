@@ -7,6 +7,8 @@ from threading import Thread
 
 import pandas as pd
 import tensorflow as tf
+from tensorflow.python.estimator.estimator import Estimator
+from tensorflow.python.estimator.run_config import RunConfig
 
 import args
 import tokenization
@@ -24,9 +26,9 @@ class InputExample(object):
           guid: Unique id for the example.
           text_a: string. The untokenized text of the first sequence. For single
             sequence tasks, only this sequence must be specified.
-          text_b: (Optional) string. The untokenized text of the second sequence.
+          text_b(Optional): string. The untokenized text of the second sequence.
             Only must be specified for sequence pair tasks.
-          label: (Optional) string. The label of the example. This should be
+          label(Optional): string. The label of the example. This should be
             specified for train and dev examples, but not for test examples.
         """
         self.guid = guid
@@ -76,7 +78,12 @@ class SimProcessor(DataProcessor):
             text_b = tokenization.convert_to_unicode(str(train[1]))
             label = str(train[2])
             train_data.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+                InputExample(
+                    guid=guid,
+                    text_a=text_a,
+                    text_b=text_b,
+                    label=label,
+                )
             )
         return train_data
 
@@ -90,7 +97,12 @@ class SimProcessor(DataProcessor):
             text_b = tokenization.convert_to_unicode(str(dev[1]))
             label = str(dev[2])
             dev_data.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+                InputExample(
+                    guid=guid,
+                    text_a=text_a,
+                    text_b=text_b,
+                    label=label,
+                )
             )
         return dev_data
 
@@ -104,7 +116,12 @@ class SimProcessor(DataProcessor):
             text_b = tokenization.convert_to_unicode(str(test[1]))
             label = str(test[2])
             test_data.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+                InputExample(
+                    guid=guid,
+                    text_a=text_a,
+                    text_b=text_b,
+                    label=label,
+                )
             )
         return test_data
 
@@ -114,7 +131,12 @@ class SimProcessor(DataProcessor):
             text_a = tokenization.convert_to_unicode(str(data[0]))
             text_b = tokenization.convert_to_unicode(str(data[1]))
             label = str(0)
-            yield InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label)
+            yield InputExample(
+                guid=guid,
+                text_a=text_a,
+                text_b=text_b,
+                label=label,
+            )
 
     def get_labels(self):
         return ['0', '1']
@@ -138,15 +160,18 @@ class BertSim:
         self.mode = mode
         self.estimator = self.get_estimator()
         if mode == tf.estimator.ModeKeys.PREDICT:
-#            self.input_queue = Queue(maxsize=1)
-#            self.output_queue = Queue(maxsize=1)
+            #self.input_queue = Queue(maxsize=1)
+            #self.output_queue = Queue(maxsize=1)
             self.input_queue = Queue(maxsize=0)
             self.output_queue = Queue(maxsize=0)
-            self.predict_thread = Thread(target=self.predict_from_queue, daemon=True)
+            self.predict_thread = Thread(
+                target=self.predict_from_queue,
+                daemon=True,
+            )
             self.predict_thread.start()
 
-    def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-                     labels, num_labels, use_one_hot_embeddings):
+    def create_model(bert_config, is_training, input_ids, input_mask,
+                     segment_ids, labels, num_labels, use_one_hot_embeddings):
         """Creates a classification model."""
         model = modeling.BertModel(
             config=bert_config,
@@ -154,23 +179,27 @@ class BertSim:
             input_ids=input_ids,
             input_mask=input_mask,
             token_type_ids=segment_ids,
-            use_one_hot_embeddings=use_one_hot_embeddings)
+            use_one_hot_embeddings=use_one_hot_embeddings,
+        )
 
         # In the demo, we are doing a simple classification task on the entire
-        # segment.
-        #
-        # If you want to use the token-level output, use model.get_sequence_output()
-        # instead.
+        # segment. If you want to use the token-level output, use
+        # model.get_sequence_output() instead.
         output_layer = model.get_pooled_output()
 
         hidden_size = output_layer.shape[-1].value
 
         output_weights = tf.get_variable(
-            "output_weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02))
+            "output_weights",
+            [num_labels, hidden_size],
+            initializer=tf.truncated_normal_initializer(stddev=0.02),
+        )
 
         output_bias = tf.get_variable(
-            "output_bias", [num_labels], initializer=tf.zeros_initializer())
+            "output_bias",
+            [num_labels],
+            initializer=tf.zeros_initializer(),
+        )
 
         with tf.variable_scope("loss"):
             if is_training:
@@ -182,24 +211,33 @@ class BertSim:
             probabilities = tf.nn.softmax(logits, axis=-1)
             log_probs = tf.nn.log_softmax(logits, axis=-1)
 
-            one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+            one_hot_labels = tf.one_hot(
+                labels,
+                depth=num_labels,
+                dtype=tf.float32,
+            )
 
-            per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+            per_example_loss = -tf.reduce_sum(
+                one_hot_labels * log_probs,
+                axis=-1,
+            )
             loss = tf.reduce_mean(per_example_loss)
 
             return (loss, per_example_loss, logits, probabilities)
 
-    def model_fn_builder(self, bert_config, num_labels, init_checkpoint, learning_rate,
-                         num_train_steps, num_warmup_steps,
+    def model_fn_builder(self, bert_config, num_labels, init_checkpoint, 
+                         learning_rate, num_train_steps, num_warmup_steps,
                          use_one_hot_embeddings):
         """Returns `model_fn` closurimport_tfe for TPUEstimator."""
 
-        def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
+        def model_fn(features, labels, mode, params):
             from tensorflow.python.estimator.model_fn import EstimatorSpec
 
             tf.logging.info("*** Features ***")
             for name in sorted(features.keys()):
-                tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+                tf.logging.info(
+                    "  name = %s, shape = %s" % (name, features[name].shape)
+                )
 
             input_ids = features["input_ids"]
             input_mask = features["input_mask"]
@@ -208,16 +246,27 @@ class BertSim:
 
             is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-            (total_loss, per_example_loss, logits, probabilities) = BertSim.create_model(
-                bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
-                num_labels, use_one_hot_embeddings)
+            (total_loss, per_example_loss, logits, probabilities) = \
+                BertSim.create_model(
+                    bert_config,
+                    is_training,
+                    input_ids,
+                    input_mask,
+                    segment_ids,
+                    label_ids,
+                    num_labels,
+                    use_one_hot_embeddings,
+                )
 
             tvars = tf.trainable_variables()
             initialized_variable_names = {}
 
             if init_checkpoint:
-                (assignment_map, initialized_variable_names) \
-                    = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+                (assignment_map, initialized_variable_names) = \
+                    modeling.get_assignment_map_from_checkpoint(
+                        tvars,
+                        init_checkpoint,
+                    )
                 tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
             #tf.logging.info("**** Trainable Variables ****")
@@ -225,22 +274,31 @@ class BertSim:
                 init_string = ""
                 if var.name in initialized_variable_names:
                     init_string = ", *INIT_FROM_CKPT*"
-#                tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-#                                init_string)
+                #tf.logging.info(
+                #    "  name = %s, shape = %s%s", var.name,var.shape,init_string
+                #)
 
             if mode == tf.estimator.ModeKeys.TRAIN:
-
                 train_op = optimization.create_optimizer(
-                    total_loss, learning_rate, num_train_steps, num_warmup_steps, False)
+                    total_loss,
+                    learning_rate,
+                    num_train_steps,
+                    num_warmup_steps,
+                    False,
+                )
 
                 output_spec = EstimatorSpec(
                     mode=mode,
                     loss=total_loss,
-                    train_op=train_op)
+                    train_op=train_op,
+                )
             elif mode == tf.estimator.ModeKeys.EVAL:
-
                 def metric_fn(per_example_loss, label_ids, logits):
-                    predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+                    predictions = tf.argmax(
+                        logits,
+                        axis=-1,
+                        output_type=tf.int32,
+                    )
                     accuracy = tf.metrics.accuracy(label_ids, predictions)
                     auc = tf.metrics.auc(label_ids, predictions)
                     loss = tf.metrics.mean(per_example_loss)
@@ -254,24 +312,25 @@ class BertSim:
                 output_spec = EstimatorSpec(
                     mode=mode,
                     loss=total_loss,
-                    eval_metric_ops=eval_metrics)
+                    eval_metric_ops=eval_metrics,
+                )
             else:
-                output_spec = EstimatorSpec(mode=mode, predictions=probabilities)
+                output_spec = EstimatorSpec(
+                    mode=mode,
+                    predictions=probabilities,
+                )
 
             return output_spec
 
         return model_fn
 
     def get_estimator(self):
-
-        from tensorflow.python.estimator.estimator import Estimator
-        from tensorflow.python.estimator.run_config import RunConfig
-
         bert_config = modeling.BertConfig.from_json_file(args.config_name)
         label_list = self.processor.get_labels()
         train_examples = self.processor.get_train_examples(args.data_dir)
         num_train_steps = int(
-            len(train_examples) / self.batch_size * args.num_train_epochs)
+            len(train_examples) / self.batch_size * args.num_train_epochs
+        )
         num_warmup_steps = int(num_train_steps * 0.1)
 
         if self.mode == tf.estimator.ModeKeys.TRAIN:
@@ -286,37 +345,46 @@ class BertSim:
             learning_rate=args.learning_rate,
             num_train_steps=num_train_steps,
             num_warmup_steps=num_warmup_steps,
-            use_one_hot_embeddings=False)
+            use_one_hot_embeddings=False,
+        )
 
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
-        config.gpu_options.per_process_gpu_memory_fraction = args.gpu_memory_fraction
+        config.gpu_options.per_process_gpu_memory_fraction = \
+            args.gpu_memory_fraction
         config.log_device_placement = False
 
         return Estimator(
             model_fn=model_fn,
             config=RunConfig(session_config=config),
             model_dir=args.output_dir,
-            params={'batch_size': self.batch_size}
+            params={'batch_size': self.batch_size},
         )
 
     def predict_from_queue(self):
-        for i in self.estimator.predict(input_fn=self.queue_predict_input_fn, yield_single_examples=False):
+        for i in self.estimator.predict(
+            input_fn=self.queue_predict_input_fn,
+            yield_single_examples=False):
             self.output_queue.put(i)
 
     def queue_predict_input_fn(self):
-        return (tf.data.Dataset.from_generator(
-            self.generate_from_queue,
-            output_types={
-                'input_ids': tf.int32,
-                'input_mask': tf.int32,
-                'segment_ids': tf.int32,
-                'label_ids': tf.int32},
-            output_shapes={
-                'input_ids': (None, self.max_seq_length),
-                'input_mask': (None, self.max_seq_length),
-                'segment_ids': (None, self.max_seq_length),
-                'label_ids': (None,)}).prefetch(10))
+        return (
+            tf.data.Dataset.from_generator(
+                self.generate_from_queue,
+                output_types={
+                    'input_ids': tf.int32,
+                    'input_mask': tf.int32,
+                    'segment_ids': tf.int32,
+                    'label_ids': tf.int32,
+                },
+                output_shapes={
+                    'input_ids': (None, self.max_seq_length),
+                    'input_mask': (None, self.max_seq_length),
+                    'segment_ids': (None, self.max_seq_length),
+                    'label_ids': (None,),
+                },
+            ).prefetch(10)
+        )
 
     def convert_examples_to_features(self, examples, label_list, max_seq_length, tokenizer):
         """Convert a set of `InputExample`s to a list of `InputFeatures`."""
@@ -414,9 +482,17 @@ class BertSim:
 
     def generate_from_queue(self):
         while True:
-            predict_examples = self.processor.get_sentence_examples(self.input_queue.get())
-            features = list(self.convert_examples_to_features(predict_examples, self.processor.get_labels(),
-                                                              args.max_seq_len, self.tokenizer))
+            predict_examples = self.processor.get_sentence_examples(
+                self.input_queue.get()
+            )
+            features = list(
+                self.convert_examples_to_features(
+                    predict_examples,
+                    self.processor.get_labels(),
+                    args.max_seq_len,
+                    self.tokenizer,
+                )
+            )
             yield {
                 'input_ids': [f.input_ids for f in features],
                 'input_mask': [f.input_mask for f in features],
@@ -426,11 +502,11 @@ class BertSim:
 
     def _truncate_seq_pair(self, tokens_a, tokens_b, max_length):
         """Truncates a sequence pair in place to the maximum length."""
-
-        # This is a simple heuristic which will always truncate the longer sequence
-        # one token at a time. This makes more sense than truncating an equal percent
-        # of tokens from each, since if one sequence is very short then each token
-        # that's truncated likely contains more information than a longer sequence.
+        # This is a simple heuristic which will always truncate the longer
+        # sequence one token at a time. This makes more sense than truncating
+        # an equal percent of tokens from each, since if one sequence is very
+        # short then each token that's truncated likely contains more
+        # information than a longer sequence.
         while True:
             total_length = len(tokens_a) + len(tokens_b)
             if total_length <= max_length:
@@ -440,7 +516,8 @@ class BertSim:
             else:
                 tokens_b.pop()
 
-    def convert_single_example(self, ex_index, example, label_list, max_seq_length, tokenizer):
+    def convert_single_example(self, ex_index, example, label_list,
+                               max_seq_length, tokenizer):
         """Converts a single `InputExample` into a single `InputFeatures`."""
         label_map = {}
         for (i, label) in enumerate(label_list):
@@ -528,23 +605,34 @@ class BertSim:
             input_ids=input_ids,
             input_mask=input_mask,
             segment_ids=segment_ids,
-            label_id=label_id)
+            label_id=label_id,
+        )
         return feature
 
-    def file_based_convert_examples_to_features(self, examples, label_list, max_seq_length, tokenizer, output_file):
+    def file_based_convert_examples_to_features(self, examples, label_list,
+                                                max_seq_length, tokenizer,
+                                                output_file):
         """Convert a set of `InputExample`s to a TFRecord file."""
-
         writer = tf.python_io.TFRecordWriter(output_file)
 
         for (ex_index, example) in enumerate(examples):
             if ex_index % 10000 == 0:
-                tf.logging.info("Writing example %d of %d" % (ex_index, len(examples)))
+                tf.logging.info(
+                    "Writing example %d of %d" % (ex_index, len(examples))
+                )
 
-            feature = self.convert_single_example(ex_index, example, label_list,
-                                                  max_seq_length, tokenizer)
+            feature = self.convert_single_example(
+                ex_index,
+                example,
+                label_list,
+                max_seq_length,
+                tokenizer,
+            )
 
             def create_int_feature(values):
-                f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
+                f = tf.train.Feature(
+                    int64_list=tf.train.Int64List(value=list(values))
+                )
                 return f
 
             features = collections.OrderedDict()
@@ -553,7 +641,9 @@ class BertSim:
             features["segment_ids"] = create_int_feature(feature.segment_ids)
             features["label_ids"] = create_int_feature([feature.label_id])
 
-            tf_example = tf.train.Example(features=tf.train.Features(feature=features))
+            tf_example = tf.train.Example(
+                features=tf.train.Features(feature=features)
+            )
             writer.write(tf_example.SerializeToString())
 
     def file_based_input_fn_builder(self, input_file, seq_length, is_training, drop_remainder):
@@ -618,20 +708,30 @@ class BertSim:
         label_list = self.processor.get_labels()
 
         train_examples = self.processor.get_train_examples(args.data_dir)
-        num_train_steps = int(len(train_examples) / args.batch_size * args.num_train_epochs)
+        num_train_steps = int(
+            len(train_examples) / args.batch_size * args.num_train_epochs
+        )
 
         estimator = self.get_estimator()
 
         train_file = os.path.join(args.output_dir, "train.tf_record")
-        self.file_based_convert_examples_to_features(train_examples, label_list, args.max_seq_len, self.tokenizer,
-                                                     train_file)
-#        tf.logging.info("***** Running training *****")
-#        tf.logging.info("  Num examples = %d", len(train_examples))
-#        tf.logging.info("  Batch size = %d", args.batch_size)
-#        tf.logging.info("  Num steps = %d", num_train_steps)
-        train_input_fn = self.file_based_input_fn_builder(input_file=train_file, seq_length=args.max_seq_len,
-                                                          is_training=True,
-                                                          drop_remainder=True)
+        self.file_based_convert_examples_to_features(
+            train_examples,
+            label_list,
+            args.max_seq_len,
+            self.tokenizer,
+            train_file,
+        )
+        #tf.logging.info("***** Running training *****")
+        #tf.logging.info("  Num examples = %d", len(train_examples))
+        #tf.logging.info("  Batch size = %d", args.batch_size)
+        #tf.logging.info("  Num steps = %d", num_train_steps)
+        train_input_fn = self.file_based_input_fn_builder(
+            input_file=train_file,
+            seq_length=args.max_seq_len,
+            is_training=True,
+            drop_remainder=True,
+        )
 
         # early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
         #     estimator,
@@ -649,7 +749,12 @@ class BertSim:
         eval_file = os.path.join(args.output_dir, "eval.tf_record")
         label_list = self.processor.get_labels()
         self.file_based_convert_examples_to_features(
-            eval_examples, label_list, args.max_seq_len, self.tokenizer, eval_file)
+            eval_examples,
+            label_list,
+            args.max_seq_len,
+            self.tokenizer,
+            eval_file,
+        )
 
         #tf.logging.info("***** Running evaluation *****")
         #tf.logging.info("  Num examples = %d", len(eval_examples))
@@ -659,7 +764,8 @@ class BertSim:
             input_file=eval_file,
             seq_length=args.max_seq_len,
             is_training=False,
-            drop_remainder=False)
+            drop_remainder=False,
+        )
 
         estimator = self.get_estimator()
         result = estimator.evaluate(input_fn=eval_input_fn, steps=None)

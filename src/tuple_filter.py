@@ -18,20 +18,21 @@ from nn_utils import cmp
 
 
 def GetData(corpus):
-    '''为验证集验证模型使用的数据
+    """
+    为验证集验证模型使用的数据
     X : numpy.array, (num_sample,num_feature)
     Y : numpy.array, (num_sample,1)
     samples : python-list,(num_sample,)
     ans : python-list, (num_question,num_answer)
     question2sample : python-dict, key:questionindex , value:sampleindexs
-    '''
+    """
     X = []
     Y = []
     samples = []
     ans = []
     gold_tuples = []
     question2sample = {}
-    
+ 
     sample_index = 0
     true_num = 0
     hop2_num = 0
@@ -45,10 +46,10 @@ def GetData(corpus):
         for t in candidate_tuples:
             features = candidate_tuples[t]
             if len(gold_tuple) == len(set(gold_tuple).intersection(set(t))):
-                X.append([features[2]])
+                X.append(features[2:])
                 Y.append([1])
             else:
-                X.append([features[2]])
+                X.append(features[2:])
                 Y.append([0])
             samples.append(t)
             q_sample_indexs.append(sample_index)
@@ -73,9 +74,9 @@ def GetData(corpus):
         
     X = np.array(X,dtype='float32')
     Y = np.array(Y,dtype='float32')
-    print('单实体问题中，候选答案可召回的的比例为:%.3f'%(hop2_true_num/hop2_num))
+    print('单实体问题中，候选答案可召回的比例为:%.3f'%(hop2_true_num/hop2_num))
     print('候选答案能覆盖标准查询路径的比例为:%.3f'%(true_num/len(corpus)))
-    return X,Y,samples,ans,gold_tuples,question2sample
+    return X, Y, samples, ans, gold_tuples, question2sample
 
 def GetData_train(corpus):
     """
@@ -95,13 +96,13 @@ def GetData_train(corpus):
         for t in candidate_tuples:
             features = candidate_tuples[t]
             if len(gold_tuple) == len(set(gold_tuple).intersection(set(t))):
-                X.append([features[2]])
+                X.append(features[2:])
                 Y.append([1])
             else:
                 prop = random.random()
                 # XXX: 0.05 sampling
                 if prop<0.05:
-                    X.append([features[2]])
+                    X.append(features[2:])
                     Y.append([0])
 
         # 判断答案是否召回
@@ -119,12 +120,12 @@ def GetData_train(corpus):
         
     X = np.array(X, dtype='float32')
     Y = np.array(Y, dtype='float32')
-    print('单实体问题中，候选答案可召回的的比例为:%.3f'%(hop2_true_num/hop2_num))
+    print('单实体问题中，候选答案可召回的比例为:%.3f'%(hop2_true_num/hop2_num))
     print('候选答案能覆盖标准查询路径的比例为:%.3f'%(true_num/len(corpus)))
 
-    return X,Y
+    return X, Y
 
-def GetPredictTuples(prepro,samples,question2sample,topn):
+def GetPredictTuples(prepro, samples, question2sample, topn):
     predict_tuples = []
     predict_props = []
     for i in range(len(question2sample)):
@@ -138,7 +139,7 @@ def GetPredictTuples(prepro,samples,question2sample,topn):
         now_samples = [samples[j] for j in range(begin_index,end_index+1)]
         now_props = [prepro[j][1] for j in range(begin_index,end_index+1)]
 
-        sample_prop = [each for each in zip(now_props,now_samples)]#(prop,(tuple))
+        sample_prop = [each for each in zip(now_props,now_samples)]
         sample_prop = sorted(sample_prop, key=lambda x:x[0], reverse=True)
         tuples = [each[1] for each in sample_prop]
         props = [each[0] for each in sample_prop]
@@ -148,7 +149,7 @@ def GetPredictTuples(prepro,samples,question2sample,topn):
         else:
             predict_tuples.append(tuples[:topn])
             predict_props.append(props[:topn])
-    return predict_tuples,predict_props
+    return predict_tuples, predict_props
 
 def ComputePrecision(gold_tuples,predict_tuples,predict_props):
     '''
@@ -167,13 +168,14 @@ def ComputePrecision(gold_tuples,predict_tuples,predict_props):
                 break
     return true_num/one_subject_num
 
-def SaveFilterCandiT(corpus,predict_tuples):
+def SaveFilterCandiT(corpus, predict_tuples):
     for i in range(len(corpus)):
         candidate_tuple_filter = {}
         for t in predict_tuples[i]:
             features = corpus[i]['candidate_tuples'][t]
-            new_features = features[0:2]+[features[9][0][1]]
-            candidate_tuple_filter[t] = new_features
+            #new_features = features[0:2]+[features[9][0][1]]
+            #candidate_tuple_filter[t] = new_features
+            candidate_tuple_filter[t] = features
         corpus[i]['candidate_tuple_filter'] = candidate_tuple_filter
         #temp =corpus[i].pop('candidate_tuples')
     return corpus
@@ -183,7 +185,10 @@ if __name__ == '__main__':
     train_path = '../data/candidate_tuples_train.pkl'
     train_corpus = pickle.load(open(train_path, 'rb'))
     x_train, y_train = GetData_train(train_corpus)
- 
+
+    print(x_train.shape)
+    print(y_train.shape)
+
     # 逻辑回归
     sc = StandardScaler()
     sc.fit(x_train)
@@ -196,11 +201,12 @@ if __name__ == '__main__':
 
     valid_path = '../data/candidate_tuples_valid.pkl'
     valid_corpus = pickle.load(open(valid_path, 'rb'))
-    x_valid,y_valid,samples_valid,ans_valid,gold_tuples_valid,question2sample_valid = GetData(valid_corpus)
+    x_valid, y_valid, samples_valid, ans_valid, gold_tuples_valid, \
+        question2sample_valid = GetData(valid_corpus)
     x_valid = sc.transform(x_valid)
     y_predict = model.predict_proba(x_valid).tolist()
  
-    #topns = [1,5,10,20,30,50,100]
+    #topns = [1, 5, 10, 20, 30, 50, 100]
     topns = [10]
     for topn in topns:
         predict_tuples_valid, predict_props_valid = GetPredictTuples(
@@ -214,7 +220,9 @@ if __name__ == '__main__':
             predict_tuples_valid,
             predict_props_valid,
         )
-        print ('在验证集上逻辑回归筛选后top%d 召回率为%.2f'%(topn,precision_topn))
+        print(
+            '在验证集上逻辑回归筛选后top%d 召回率为%.2f'%(topn, precision_topn)
+        )
  
     SaveFilterCandiT(valid_corpus, predict_tuples_valid)
     pickle.dump(
@@ -222,7 +230,8 @@ if __name__ == '__main__':
         open('../data/candidate_tuples_filter_valid.pkl', 'wb'),
     )
     
-    x_train,y_train,samples_train,ans_train,gold_tuples_train,question2sample_train = GetData(train_corpus)
+    x_train, y_train, samples_train, ans_train, gold_tuples_train, \
+        question2sample_train = GetData(train_corpus)
     x_train = sc.transform(x_train)
     y_predict = model.predict_proba(x_train).tolist()
     predict_tuples_train, predict_props_train = GetPredictTuples(
@@ -239,7 +248,8 @@ if __name__ == '__main__':
  
     test_path = '../data/candidate_tuples_test.pkl'
     test_corpus = pickle.load(open(test_path, 'rb'))
-    x_test,y_test,samples_test,ans_test,gold_tuples_test,question2sample_test = GetData(test_corpus)
+    x_test, y_test, samples_test, ans_test, gold_tuples_test, \
+        question2sample_test = GetData(test_corpus)
     x_test = sc.transform(x_test)
     y_predict = model.predict_proba(x_test).tolist()
     predict_tuples_test, predict_props_test = GetPredictTuples(
